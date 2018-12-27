@@ -1,0 +1,12 @@
+## Script for getting input from front end as parameters.
+##========================================================
+## Input python test_auto.py hi hello vfhvbdfh
+##========================================================
+#### Output
+##   ['hi', 'hello', 'vfhvbdfh']
+##========================================================
+
+import sys
+
+args = sys.argv[1:]
+print args

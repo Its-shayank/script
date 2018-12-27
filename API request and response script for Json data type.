@@ -1,0 +1,88 @@
+####============================================================
+###
+###This code is used for API gettransactions
+##--------SP Name: UI_Get_Transaction_v1
+##--------All Transaction api
+####============================================================
+
+import pyodbc
+
+def sdk_gettransactions(angelID,fromDate,toDate,dpFlag):
+	cursor = sql_server_cursor()
+	with cursor as cur:
+		inOutParams = (angelID,'','',dpFlag,fromDate,toDate,'','','')
+		## --------------------------------------------------------------
+		#----exec UI_Get_Transaction_v1 @PartyCode = 'A34430', @SchemeCode = '', @isin = '', @type = 'NAP', @FromDate = '', @ToDate = '', @Records = '', @MapID = '', @ProductID = '' 
+		## --------------------------------------------------------------
+		ab = cursor.execute("exec UI_Get_Transaction_v1 ?,?,?,?,?,?,?,?,?",inOutParams)
+		resp1 = []
+		try:
+			for value1 in ab:
+				dt = {}
+				dt["PartyCode"]= value1[0]
+				dt["Broker"]= value1[1] 
+				dt["Exchange"]= value1[2]
+				dt["SettNo"]= value1[3] 
+				dt["TransDate"]= value1[4]
+				dt["AngelCode"]= value1[5]
+				dt["AMCSchemeCode"]= value1[6]
+				dt["scheme_code"]= value1[7]
+				dt["ISIN"]= value1[8]
+				dt["SchemeName"]= value1[9]
+				dt["SchemeCategory"]= value1[10]
+				dt["BuySell"]= value1[11]
+				dt["Qty"]= str(value1[12])
+				dt["MktRate"]= str(value1[13])
+				dt["Brok"]= value1[14]
+				dt["OtherCharges"]= value1[15]
+				dt["NetRate"]= str(value1[16])
+				dt["NetAmt"]= str(value1[17])
+				dt["TransType"]= value1[18]
+				dt["DPFlag"]= value1[19]
+				dt["MnlID"]= value1[20]
+				dt["SIPid"]= value1[21]
+				dt["sipFreq"]= value1[22]
+				dt["totalInstallments"]= value1[23]
+				dt["DataSource"]= value1[24]
+				dt["MapId"]= value1[25]
+				dt["ProductId"]= value1[26]
+				resp1.append(dt)
+		except Exception,e:
+			logger.info(e)
+			cursor.close()
+			return "Failled to call sp!!!!!!"
+		return resp1, cursor
+
+@csrf_exempt
+def gettransactions(request):
+	angelID = request.POST.get('angelID','')
+	schemeCode = request.POST.get('schemeCode','')
+	isin = request.POST.get('isin','')
+	dpFlag = request.POST.get('dpFlag','')
+	fromDate = request.POST.get('fromDate','')
+	toDate = request.POST.get('toDate','')
+	records = request.POST.get('records','')
+	mapID = request.POST.get('mapID','')
+	productID = request.POST.get('productID','')
+	osType = request.POST.get('osType','')
+	osVersion = request.POST.get('osVersion','')
+	deviceID = request.POST.get('deviceID','')
+	resp = {}
+	if angelID:
+		value, cursor = sdk_gettransactions(angelID,fromDate,toDate,dpFlag)
+		cursor.close()
+		if value == '':
+			resp['status'] = 'failed'
+			resp['status_code'] = 401
+			resp['message'] = 'Please enter valid pcode!!!!!!!'
+			return HttpResponse(json.dumps(resp), content_type = 'application/json')
+		else:
+			resp['status'] = 'success'
+			resp['status_code'] = 200
+			resp['message'] = value
+			return HttpResponse(json.dumps(resp), content_type = 'application/json')
+	else:
+		resp['status'] = 'failed'
+		resp['status_code'] = 400
+		resp['message'] = 'Please enter valid value.'
+		return HttpResponse(json.dumps(resp), content_type = 'application/json')

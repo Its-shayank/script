@@ -1,0 +1,427 @@
+import subprocess
+import json
+import ast
+import pandas as pd
+import re
+from pandas.io.json import json_normalize
+import pyodbc
+import numpy as np
+import datetime as dt
+from datetime import timedelta
+import time
+
+
+date_list = [(20180817, 20180819), (20180820, 20180822), (20180823, 20180825), (20180826, 20180828), (20180829, 20180831), (20180901, 20180902), (20180903, 20180904), (20180905, 20180907), (20180908, 20180910), (20180911, 20180913), (20180914, 20180916), (20180917, 20180919), (20180920, 20180922), (20180923, 20180925), (20180926, 20180928), (20180929, 20180930), (20181001, 20181002), (20181003, 20181004), (20181005, 20181007), (20181008, 20181010), (20181011, 20181013), (20181014, 20181016), (20181017, 20181019), (20181020, 20181022), (20181023, 20181025), (20181026, 20181028), (20181029, 20181031), (20181101, 20181102), (20181103, 20181104), (20181105, 20181107), (20181108, 20181110), (20181111, 20181113), (20181114, 20181116), (20181117, 20181119), (20181120, 20181122), (20181123, 20181125), (20181126, 20181128), (20181129, 20181130)]
+
+def st_dt():
+	a = dt.datetime.now()
+	aa = dt.datetime.now().date()
+	aa1 = aa + dt.timedelta(days=-1)
+	# formate 20181101
+	yesterday_date = str(aa1).replace("-","")
+#	print yesterday_date
+	return yesterday_date
+
+event_fields_dict = {
+						'profile.objectId': 'profile_objectid',
+						'profile.platform': 'profile_platform',
+						'profile.name': 'profile_name',
+						'profile.all_identities': 'profile_all_identities',
+						'profile.phone': 'profile_phone',
+						'profile.push_token': 'profile_push_token',
+						'profile.email': 'profile_email',
+						'profile.identity': 'profile_identity',
+						'session_props.session_source': 'session_props_session_source, ',
+						'ts': 'ts',
+						'event_props.Show more schemes': 'event_props_show_more_schemes',
+						'event_props.Email': 'event_props_email',
+						'event_props.Scheme Name': 'event_props_scheme_name',
+						'event_props.Scheme Selected': 'event_props_scheme_selected',
+						'event_props.More schemes selected': 'event_props_more_schemes_selected',
+						'event_props.show more': 'event_props_showmore',
+						'event_props.source': 'event_props_source',
+						'event_props.emailId': 'event_props_emailid',
+						'event_props.App_version': 'event_props_app_version',
+						'event_props.MFCatergory': 'event_props_mfcatergory',
+						'event_props.MoreCatergoy': 'event_props_morecatergoy',
+						'event_props.SearchYourScheme': 'event_props_search_your_scheme',
+						'event_props.segment': 'event_props_segment',
+						'event_props.bank': 'event_props_bank',
+						'event_props.Mode': 'event_props_mode',
+						'event_props.Message': 'event_props_Message',
+						'event_props.amount': 'event_props_amount_1',
+						'event_props.issuccess': 'event_props_issuccess',
+						'event_props.clicked_on': 'event_props_clicked_on',
+						'event_props.type2': 'event_props_type2',
+						'event_props.schemeName2': 'event_props_schemename2',
+						'event_props.type1': 'event_props_type1',
+						'event_props.schemeName4': 'event_props_schemename4',
+						'event_props.schemeName3': 'event_props_schemename3',
+						'event_props.schemeName1': 'event_props_schemename1',
+						'event_props.type4': 'event_props_type4',
+						'event_props.type3': 'event_props_type3',
+						'event_props.ARQRatingClick': 'event_props_arq_rating_click',
+						'event_props.schemeInfo': 'event_props_schemeinfo',
+						'event_props.goalName': 'event_props_goalname',
+						'event_props.isCustomGoal': 'event_props_is_custom_goal',
+						'event_props.ClickDPCalc': 'event_props_click_dp_calc',
+						'event_props.goalDate': 'event_props_goaldate',
+						'event_props.goalAmount': 'event_props_goalamount',
+						'event_props.amount': 'event_props_amount_2',
+						'event_props.financing': 'event_props_financing',
+						'event_props.EMISal': 'event_props_emi_sal',
+						'event_props.CurrentEMI': 'event_props_current_emi',
+						'event_props.intrstRate': 'event_props_intrst_rate',
+						'event_props.loanTerm': 'event_props_loan_term',
+						'event_props.monthlyIncome': 'event_props_monthly_income',
+						'event_props.targetYear': 'event_props_target_year',
+						'event_props.goalActionType': 'event_props_goal_action_type',
+						'event_props.requiredSipAmount': 'event_props_required_sip_amount',
+						'event_props.amounttoInvest': 'event_props_amounttoinvest',
+						'event_props.Fund Name': 'event_props_Fund Name'
+				}
+
+
+events_name = list(set(['Sell', 'MF_screener_LS', 'SIP_Campg', 'MF_screener_2', 'MF_crd_SIP_conf', 'Stocks ARQ - step 2 (invest now)', 'Expense screen', 'Goals', 'WS MF', 'BSA working', 'App installed', 'Stocks ARQ - step 4 (pre order confirmation)', 'Details_1_basic', 'Goal Summary', 'App uninstalled', 'WS SIP', 'Goal investment plan', 'GoalTracking', 'Why BSA', 'Set Budget', 'Add Goal', 'TAX_campg', 'BSAFundInfo', 'MF_screener_SIP', 'BSAFundPerformance', 'Start SIP', 'Add transaction', 'WS Tax', 'App launched', 'MF ARQ - Step 5 (order success)', 'health Insurance', 'Guest Login', 'MF_campg', 'Fund Transfer', 'Tax_Card3_InvestNow', 'MF ARQ - Step 2 (invest now)', 'MF_crd_LS_conf', 'notification viewed', 'BankBalance screen', 'scheme_ratings', 'SIP Order confirmation', 'Register - DIY', 'guestToClient', 'MF_Screener_1', 'Details_2_bank', 'Tax_card2_Invst', 'fundTransfer', 'login_screen', 'ARQ SIP Reco', 'Details_3c_Professional', 'DiscreteFundTransfer', 'GoalDetail', 'MF_crd_SIP', 'BSA Withdraw', 'On_login_MF', 'On_login_Tax', 'member Details', 'Buy', 'DPCalc', 'MF ARQ - Step 4 (pre order confirmation)', '\t', 'policy Scheme', 'Search', 'tax_card1', 'WS app explore', 'BSA Invest now', 'Add to SIP Basket', 'login_other', 'BSA_campg', 'MF_crd_LS', 'TradeLoginPopUp', 'MF_LS_Conf', 'Details_3a_identity', 'preLogin_1', 'Portfolio screen', 'MF_SIP_Conf', 'mf_order_Success', 'login_gmail', 'UTM visited', 'Goal_selection', 'SIP order book', 'MF ARQ - Step 1 (Questionaire)', 'On_login_SIP', 'Stocks ARQ - step 1 (Questionaire)', 'Login', 'Sell confirmation', 'KYC_Success', 'HI Summary', 'ARQ Advisory', 'MF_crd_1', 'MF_crd_2','Add Investments','Add to portfolio','Add_Investment','Add2Cart','AngelBEE charges','AO_FT_CanceledbyUser','AO_FT_Failed','AO_FT_Success','ARQ Benefits','ARQ Rating click','Buy confirmation','Cancel_All_SIP','Cancel_SIP','Cancel_SIP_Conf','Create_OTM','Enable_MPIN','Filter','Force update','Forgot_Auth_MPIN','Forgot_MPIN','FT_CanceledbyUser','FT_Failed','FT_Success','Fund camparison','Get MF Statement','HI_AddNominee','HI_basicDetails','HI_Click','HI_Compare','HI_halffilled_journey','HI_InsuranceDetails','HI_MemberDetails','HI_MorePolicies','HI_order_conf','HI_Success','Hi_Summary','Investment return','IPV_Video','Know_More','KYC_fail_FT_success','KYC_FT_Success','KYC_success_FT_fail','Language','Languageselected','Missed_Call_Fail','Missed_Call_Permisson','Mod-Del transaction','More categories - MF','NFO','Order dtls - Req Callback','OTM_Proceed','OTM_Success','OTM_W/o_Aadhaar','Redemptions charges','ReInitiate_Mandate','ReOrder_SIP','Reset_MPIN','Risk associated','Scheme - Top holdings','Scheme details','Scheme performance','Schemes - Sectors','Sell M transactions','Set_MPIN','Share_MF','Sign_in_with_Gmail','SMS_Revoke','Sort - Ratings','Sort - Returns','Sort - Scheme size','Start investing','Tax implications','upload manually','Upload_manually','Upload_On_Your_Behalf']))
+
+
+
+def get_data_from_cursor(d, event, data_dict, email_list, phone_list, party_code_list):
+	cmd_cur = '''curl "https://api.urls.com/1/events.json?cursor=%s" -H "Content-Type: application/json" '''%(d)
+
+	p = subprocess.Popen(cmd_cur, stdout=subprocess.PIPE,shell=True)
+	x = p.communicate()
+	print "x===========",x, event 
+	if not x or x == '' or x == None or x[0] == '':
+		return data_dict, email_list, phone_list, party_code_list
+
+	json_data = ast.literal_eval(x[0])
+	
+	if not json_data.get('records', False):
+		return data_dict, email_list, phone_list, party_code_list
+
+	print "json_data===========$$$$$$$$$$$",json_data['records']
+	records = json_normalize(json_data['records'])
+
+	if 	'profile.email' in records	:
+			email = records[records['profile.email'].str.contains("@",na=False)]
+			email_list.extend(email['profile.email'].tolist())	
+
+	if 'profile.phone' in records:	
+		phone = pd.to_numeric(records['profile.phone'].dropna().astype('int64').apply(lambda x: str(x)[2:] if len(str(x)) == 12 else str(x)).tolist())
+		phone = [str(i) for i in phone]
+		phone_list.extend(phone)
+	
+	if 'profile.identity' in records:
+		df_party_code = records['profile.identity'].dropna()
+		df_party_code1 = df_party_code[df_party_code.str.contains((r'(\D)'), regex=True)].tolist()			
+		party_code_list.extend(filter(lambda x : not bool(re.search(r'@', x)), df_party_code1))
+
+	if json_data and json_data.get('records',False):
+		records = json_normalize(json_data['records'])
+		if 'profile.phone' in records:	
+			records['profile.phone'] =  records['profile.phone'].fillna(-1).astype(int).astype(str).replace('-1', np.nan)
+		records = records.fillna("")
+		records = records.to_dict('records')
+		if data_dict.get(event,False):
+			data_dict[event].extend(records)
+		else:
+			data_dict.update({event:records})
+
+	if json_data.get('next_cursor', False):
+		d = str(json_data['next_cursor'])
+		print "**********************************************************************>>"
+		get_data_from_cursor(d, event, data_dict, email_list, phone_list, party_code_list)
+	return data_dict, email_list, phone_list, party_code_list
+
+
+def get_event_data_from_clevertap(events_name, from_date, to_date):
+	event_error = []
+	count = 0
+	data_dict = {}
+	email_list = []
+	phone_list = []
+	party_code_list = []
+	st_date = None
+	st_date = st_dt()
+	print "type of st_date",type(st_date)
+	for event in events_name:
+		#------formate =================from":20180629,"to":20180630
+		cmd = '''curl -X POST -d '{"event_name":"%s","from":%s,"to":%s }' "https://api. urls " '''%(event, from_date, to_date)
+		print cmd
+		p = subprocess.Popen(cmd, stdout=subprocess.PIPE,shell=True)
+		b = p.communicate()
+		print "b============",b , event
+
+		try:
+			d = dict(eval(b[0]))['cursor']
+		except:
+			#error.append(event)
+			continue	
+		data_dict, email_list, phone_list, party_code_list  = get_data_from_cursor(d, event, data_dict, email_list, phone_list, party_code_list)	
+
+	return  data_dict, list(set(email_list)), list(set(phone_list)), list(set(party_code_list))
+
+
+def insert_into_table(cursor, data_dict):
+	count = 0 
+	for event, vals in data_dict.iteritems():
+		for val in vals:
+			print "val=============",val
+			count = count + 1        
+			event_name = event
+	        	profile_objectid =  str(val.get('profile.objectId','')).replace("'",'')  
+	        	profile_platform =  str(val.get('profile.platform','')).replace("'",'') 
+	        	profile_name =  str(val.get('profile.name','')).replace("'",'') 
+	        	profile_all_identities =  str(val.get('profile.all_identities','')).replace("'",'') 
+	       		profile_phone =  str(val.get('profile.phone','')).replace("'",'')
+	        	profile_push_token =  str(val.get('profile.push_token','')).replace("'",'') 
+	        	profile_email =  str(val.get('profile.email','')).replace("'",'') 
+	        	profile_identity =  str(val.get('profile.identity','')).replace("'",'') 
+	        	session_props_session_source =  str(val.get('session_props.session_source','')).replace("'",'') 
+	        	ts =  str(val.get('ts','')).replace("'",'') 
+	        	event_props_show_more_schemes =  str(val.get('event_props.Show more schemes','')).replace("'",'') 
+	        	event_props_email =  str(val.get('event_props.Email','')).replace("'",'') 
+	        	event_props_scheme_name =  str(val.get('event_props.Scheme Name','')).replace("'",'') 
+	        	event_props_scheme_selected =  str(val.get('event_props.Scheme Selected','')).replace("'",'') 
+	        	event_props_more_schemes_selected =  str(val.get('event_props.More schemes selected','')).replace("'",'') 
+	        	event_props_showmore =  str(val.get('event_props.show more','')).replace("'",'') 
+	        	event_props_source =  str(val.get('event_props.source','')).replace("'",'') 
+	       	 	event_props_emailid =  str(val.get('event_props.emailId','')).replace("'",'') 
+	        	event_props_app_version =  str(val.get('event_props.App_version','')).replace("'",'') 
+	        	event_props_mfcatergory =  str(val.get('event_props.MFCatergory','')).replace("'",'') 
+	        	event_props_morecatergoy =  str(val.get('event_props.MoreCatergoy','')).replace("'",'') 
+	        	event_props_search_your_scheme =  str(val.get('event_props.SearchYourScheme','')).replace("'",'') 
+	        	event_props_segment =  str(val.get('event_props.segment','')).replace("'",'') 
+	        	event_props_bank =  str(val.get('event_props.bank','')).replace("'",'') 
+	        	event_props_mode =  str(val.get('event_props.Mode','')).replace("'",'') 
+	        	event_props_Message =  str(val.get('event_props.Message','')).replace("'",'') 
+	        	event_props_amount_1 =  str(val.get('event_props.amount','')).replace("'",'') 
+	        	event_props_issuccess =  str(val.get('event_props.issuccess','')).replace("'",'') 
+	        	event_props_clicked_on =  str(val.get('event_props.clicked_on','')).replace("'",'') 
+	        	event_props_type2 =  str(val.get('event_props.type2','')).replace("'",'') 
+	        	event_props_schemename2 =  str(val.get('event_props.schemeName2','')).replace("'",'') 
+	        	event_props_type1 =  str(val.get('event_props.type1','')).replace("'",'') 
+	        	event_props_schemename4 =  str(val.get('event_props.schemeName4','')).replace("'",'') 
+	        	event_props_schemename3 =  str(val.get('event_props.schemeName3','')).replace("'",'') 
+	        	event_props_schemename1 =  str(val.get('event_props.schemeName1','')).replace("'",'') 
+	        	event_props_type4 =  str(val.get('event_props.type4','')).replace("'",'') 
+	        	event_props_type3 =  str(val.get('event_props.type3','')).replace("'",'') 
+	        	event_props_arq_rating_click =  str(val.get('event_props.ARQRatingClick','')).replace("'",'') 
+	        	event_props_schemeinfo =  str(val.get('event_props.schemeInfo','')).replace("'",'') 
+	        	event_props_goalname =  str(val.get('event_props.goalName','')).replace("'",'') 
+	        	event_props_is_custom_goal =  str(val.get('event_props.isCustomGoal','')).replace("'",'') 
+	        	event_props_click_dp_calc =  str(val.get('event_props.ClickDPCalc','')).replace("'",'') 
+	        	event_props_goaldate =  str(val.get('event_props.goalDate','')).replace("'",'') 
+	        	event_props_goalamount =  str(val.get('event_props.goalAmount','')).replace("'",'') 
+	        	event_props_amount_2 =  str(val.get('event_props.amount','')).replace("'",'') 
+	        	event_props_financing =  str(val.get('event_props.financing','')).replace("'",'') 
+	        	event_props_emi_sal =  str(val.get('event_props.EMISal','')).replace("'",'') 
+	        	event_props_current_emi =  str(val.get('event_props.CurrentEMI','')).replace("'",'') 
+	        	event_props_intrst_rate =  str(val.get('event_props.intrstRate','')).replace("'",'') 
+	        	event_props_loan_term =  str(val.get('event_props.loanTerm','')).replace("'",'') 
+	        	event_props_monthly_income =  str(val.get('event_props.monthlyIncome','')).replace("'",'') 
+	        	event_props_target_year =  str(val.get('event_props.targetYear','')).replace("'",'') 
+	        	event_props_goal_action_type =  str(val.get('event_props.goalActionType','')).replace("'",'') 
+	        	event_props_required_sip_amount =  str(val.get('event_props.requiredSipAmount','')).replace("'",'') 
+	        	event_props_amounttoinvest =  str(val.get('event_props.amounttoInvest','')).replace("'",'')
+	        	event_props_Fund_Name =  str(val.get('event_props.Fund Name','')).replace("'",'')
+#	        	print "event_props_Fund_Name", type(event_props_Fund_Name)
+	        	query = """INSERT INTO clevertap_events_hist (event_name, 
+	                        profile_objectid,  
+	                        profile_platform, 
+	                        profile_name, 
+	                        profile_all_identities, 
+	                        profile_phone, 
+	                        profile_push_token, 
+	                        profile_email, 
+	                        profile_identity, 
+	                        session_props_session_source, 
+	                        ts, 
+	                        event_props_show_more_schemes, 
+	                        event_props_email, 
+	                        event_props_scheme_name, 
+	                        event_props_scheme_selected, 
+	                        event_props_more_schemes_selected, 
+	                        event_props_showmore, 
+	                        event_props_source, 
+	                        event_props_emailid, 
+	                        event_props_app_version, 
+	                        event_props_mfcatergory, 
+	                        event_props_morecatergoy, 
+	                        event_props_search_your_scheme, 
+	                        event_props_segment, 
+	                        event_props_bank, 
+	                        event_props_mode, 
+	                        event_props_Message, 
+	                        event_props_amount_1, 
+	                        event_props_issuccess, 
+	                        event_props_clicked_on, 
+	                        event_props_type2, 
+	                        event_props_schemename2, 
+	                        event_props_type1, 
+	                        event_props_schemename4, 
+	                        event_props_schemename3, 
+	                        event_props_schemename1, 
+	                        event_props_type4, 
+	                        event_props_type3, 
+	                        event_props_arq_rating_click, 
+	                        event_props_schemeinfo, 
+	                        event_props_goalname, 
+	                        event_props_is_custom_goal, 
+	                        event_props_click_dp_calc, 
+	                        event_props_goaldate, 
+	                        event_props_goalamount, 
+	                        event_props_amount_2, 
+	                        event_props_financing, 
+	                        event_props_emi_sal, 
+	                        event_props_current_emi, 
+	                        event_props_intrst_rate, 
+	                        event_props_loan_term, 
+	                        event_props_monthly_income, 
+	                        event_props_target_year, 
+	                        event_props_goal_action_type, 
+	                        event_props_required_sip_amount, 
+	                        event_props_amounttoinvest,
+	                        event_props_Fund_Name
+	                    )""" """  
+	                    VALUES(
+	                            '%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s
+	                                ','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'
+	                    )"""%(
+	                        event_name, 
+	                        profile_objectid,  
+	                        profile_platform, 
+	                        profile_name, 
+	                        profile_all_identities, 
+	                        profile_phone, 
+	                        profile_push_token, 
+	                        profile_email, 
+	                        profile_identity, 
+	                        session_props_session_source, 
+	                        ts, 
+	                        event_props_show_more_schemes, 
+	                        event_props_email, 
+	                        event_props_scheme_name, 
+	                        event_props_scheme_selected, 
+	                        event_props_more_schemes_selected, 
+	                        event_props_showmore, 
+	                        event_props_source, 
+	                        event_props_emailid, 
+	                        event_props_app_version, 
+	                        event_props_mfcatergory, 
+	                        event_props_morecatergoy, 
+	                        event_props_search_your_scheme, 
+	                        event_props_segment, 
+	                        event_props_bank, 
+	                        event_props_mode, 
+	                        event_props_Message, 
+	                        event_props_amount_1, 
+	                        event_props_issuccess, 
+	                        event_props_clicked_on, 
+	                        event_props_type2, 
+	                        event_props_schemename2, 
+	                        event_props_type1, 
+	                        event_props_schemename4, 
+	                        event_props_schemename3, 
+	                        event_props_schemename1, 
+	                        event_props_type4, 
+	                        event_props_type3, 
+	                        event_props_arq_rating_click, 
+	                        event_props_schemeinfo, 
+	                        event_props_goalname, 
+	                        event_props_is_custom_goal, 
+	                        event_props_click_dp_calc, 
+	                        event_props_goaldate, 
+	                        event_props_goalamount, 
+	                        event_props_amount_2, 
+	                        event_props_financing, 
+	                        event_props_emi_sal, 
+	                        event_props_current_emi, 
+	                        event_props_intrst_rate, 
+	                        event_props_loan_term, 
+	                        event_props_monthly_income, 
+	                        event_props_target_year, 
+	                        event_props_goal_action_type, 
+	                        event_props_required_sip_amount, 
+	                        event_props_amounttoinvest,
+	                        event_props_Fund_Name
+
+	            	)
+#	        	print "query=========!!!!!!!!!!!!!!!!!!!!!",query  
+	        	cursor.execute(query)
+		print "final count >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",count
+		st_date1 = None
+		st_date1 = st_dt()
+		with open('/home/Desktop/{}.txt'.format(st_date1), 'w') as f:
+			f.write("-=-=-=-=-=-=-=-=-=-=-=-START=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+			f.write("\nStart time: "+str(st_date1)+"\n\n final count >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"+str(count))
+			f.write("\n-=-=-=-=-=-=-=-=-=-=-=END-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+			# Close the connection to the file
+			f.close()
+
+def sql_server_cursor():
+	server = '172.XXX.XXX.XXX'
+	database = 'my database name'
+	username = 'my username'
+	password = 'my password'
+	driver='{ODBC Driver 17 for SQL Server}'
+
+	connection = pyodbc.connect('DRIVER='+driver+';SERVER='+server+';PORT=1443;DATABASE='+database+';UID='+username+';PWD='+password)
+	return connection.cursor(), connection
+
+def insert_into_master_mapping(cursor, email_list=[], phone_list=[], party_code_list=[]):
+	if phone_list:
+		query_phone = "SELECT mobile_no FROM mobile_no_mapping where mobile_no in  %s "%(tuple(phone_list),)
+		cursor.execute(query_phone) 
+		data =  cursor.fetchall()
+		phone_already_in_db = set([str(i[0]) for i in data])
+		phone_not_in_db = list(set(phone_list) - set(phone_already_in_db))
+		#print "phone_not_in_db====",phone_not_in_db
+		for mobile_no in phone_not_in_db:
+			query = "INSERT INTO mobile_no_mapping_python (mobile_no)""VALUES('%s')"%(mobile_no)
+			cursor.execute(query)
+
+		
+	if email_list:
+		q = "SELECT email_id FROM email_id_mapping where email_id in " + str(tuple(email_list))
+		cursor.execute(q) 
+		data =  cursor.fetchall()
+		email_already_in_db = [str(i[0]) for i in data]
+		e1 = [i.lower() for i in email_list]
+		e2 = [i.lower() for i in email_already_in_db]
+		email_not_in_db = list(set(e1) - set(e2))
+		#print "email_not_in_db====",email_not_in_db
+		for email_id in email_not_in_db:
+			query = "INSERT INTO email_id_mapping_python (email_id)""VALUES('%s')"%(email_id)
+			cursor.execute(query)		
+		
+	if party_code_list:
+		query_party_code = "SELECT party_code FROM party_code_mapping where party_code in  %s"%(tuple(party_code_list),)
+		cursor.execute(query_party_code) 
+		data =  cursor.fetchall()
+		party_code_already_in_db = set([str(i[0]) for i in data])
+		pc1 = [i.upper() for i in party_code_list]
+		pc2 = [i.upper() for i in party_code_already_in_db]
+		party_code_not_in_db = list(set(pc1) - set(pc2))
+		#print "party_code_not_in_db====",party_code_not_in_db
+		for party_code in party_code_not_in_db:
+			query = "INSERT INTO party_code_mapping_python (party_code)""VALUES('%s')"%(party_code)
+			cursor.execute(query)	
+
+
+for from_date, to_date in date_list:
+	start_time = time.time()
+	cursor, connection = sql_server_cursor()
+	data_dict, email_list, phone_list, party_code_list = get_event_data_from_clevertap(events_name, from_date, to_date)
+	insert_into_master_mapping(cursor, email_list, phone_list, party_code_list)
+	insert_into_table(cursor, data_dict)
+	connection.commit()
+
+	end_time = time.time()
+	print "done...................................................."
+
+	elapsed_time = end_time - start_time
+
+	print "elspsed time: ......................", elapsed_time
+	print "from_date:::::::::::", from_date, "to_date::::::::::::::", to_date

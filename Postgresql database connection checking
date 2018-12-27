@@ -1,0 +1,12 @@
+###-----------------------------------------------
+## Script to checking connection with postgresql.
+### select query
+###-----------------------------------------------
+
+import psycopg2
+conn = psycopg2.connect("dbname='your db name' user='your username' host='172.XXX.XXX.XXX' password='your password'")
+cur = conn.cursor()
+query = "SELECT count(*) FROM user_table;"
+cur.execute(query)
+columns = cur.fetchall()
+print columns

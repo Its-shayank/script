@@ -1,0 +1,58 @@
+####============================================================
+###
+###This code is used for API gettransactions
+##--------SP Name: UP_Get_Transaction_v1
+##--------All Transaction api
+####============================================================
+
+import pyodbc
+
+server = '10.XXX.XXX.XXX'
+database = 'your databasename'
+username = 'your username'
+password = 'your password'
+driver='{ODBC Driver 17 for SQL Server}'
+
+connection = pyodbc.connect('DRIVER='+driver+';SERVER='+server+';PORT=1433;DATABASE='+database+';UID='+username+';PWD='+password)
+cursor = connection.cursor()
+
+l1 = []
+inOutParams = ('QAQ1677','','','','2018-11-11','2018-12-11','','','')
+## --------------------------------------------------------------
+#----exec UP_Get_Transaction_v1 @PartyCode = 'QW3A430', @SchemeCode = '', @isin = '', @type = 'NAP', @FromDate = '', @ToDate = '', @Records = '', @MapID = '', @ProductID = '' 
+## --------------------------------------------------------------
+ab = cursor.execute("exec UP_Get_Transaction_v1 ?,?,?,?,?,?,?,?,?",inOutParams)
+resp1 = []
+for value1 in ab:
+	dt = {}
+	dt["PartyCode"]= value1[0]
+	dt["Broker"]= value1[1] 
+	dt["Exchange"]= value1[2]
+	dt["SettNo"]= value1[3] 
+	dt["TransDate"]= value1[4]
+	dt["AngelCode"]= value1[5]
+	dt["AMCSchemeCode"]= value1[6]
+	dt["scheme_code"]= value1[7]
+	dt["ISIN"]= value1[8]
+	dt["SchemeName"]= value1[9]
+	dt["SchemeCategory"]= value1[10]
+	dt["BuySell"]= value1[11]
+	dt["Qty"]= str(value1[12])
+	dt["MktRate"]= str(value1[13])
+	dt["Brok"]= value1[14]
+	dt["OtherCharges"]= value1[15]
+	dt["NetRate"]= str(value1[16])
+	dt["NetAmt"]= str(value1[17])
+	dt["TransType"]= value1[18]
+	dt["DPFlag"]= value1[19]
+	dt["MnlID"]= value1[20]
+	dt["SIPid"]= value1[21]
+	dt["sipFreq"]= value1[22]
+	dt["totalInstallments"]= value1[23]
+	dt["DataSource"]= value1[24]
+	dt["MapId"]= value1[25]
+	dt["ProductId"]= value1[26]
+	resp1.append(dt)
+
+cursor.close()
+print "Printing the value of response~~~~~~~~~~~~~~~~~~~~~",resp1

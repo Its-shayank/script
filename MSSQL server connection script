@@ -1,0 +1,22 @@
+###=========================================================
+##--- Script for testing sp calling and connection checking.
+##---- mssql database
+###=========================================================
+
+import pyodbc
+
+server = '10.0.XXXX.XXXX'
+database = 'database_name'
+username = 'your username'
+password = 'your password'
+driver='{ODBC Driver 17 for SQL Server}'
+
+connection = pyodbc.connect('DRIVER='+driver+';SERVER='+server+';PORT=1433;DATABASE='+database+';UID='+username+';PWD='+password)
+cursor = connection.cursor()
+
+l1 = []
+d1 = {}
+inOutParams = ('sdeq0101','',0,0)
+ab = cursor.execute("exec Get_Portfolio_v1 ?,?,?,?",inOutParams)
+for row in ab:
+	print row

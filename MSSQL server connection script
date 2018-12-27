@@ -1,6 +1,7 @@
 ###=========================================================
 ##--- Script for testing sp calling and connection checking.
 ##---- mssql database
+###------ required ODBC driver 17
 ###=========================================================
 
 import pyodbc

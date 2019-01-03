@@ -7,10 +7,10 @@
 
 import pyodbc
 
-def sdk_gettransactions(angelID,fromDate,toDate,dpFlag):
+def sdk_gettransactions(ID,fromDate,toDate,dpFlag):
 	cursor = sql_server_cursor()
 	with cursor as cur:
-		inOutParams = (angelID,'','',dpFlag,fromDate,toDate,'','','')
+		inOutParams = (ID,'','',dpFlag,fromDate,toDate,'','','')
 		## --------------------------------------------------------------
 		#----exec UI_Get_Transaction_v1 @PartyCode = 'A34430', @SchemeCode = '', @isin = '', @type = 'NAP', @FromDate = '', @ToDate = '', @Records = '', @MapID = '', @ProductID = '' 
 		## --------------------------------------------------------------
@@ -55,7 +55,7 @@ def sdk_gettransactions(angelID,fromDate,toDate,dpFlag):
 
 @csrf_exempt
 def gettransactions(request):
-	angelID = request.POST.get('angelID','')
+	ageID = request.POST.get('agelID','')
 	schemeCode = request.POST.get('schemeCode','')
 	isin = request.POST.get('isin','')
 	dpFlag = request.POST.get('dpFlag','')
@@ -68,8 +68,8 @@ def gettransactions(request):
 	osVersion = request.POST.get('osVersion','')
 	deviceID = request.POST.get('deviceID','')
 	resp = {}
-	if angelID:
-		value, cursor = sdk_gettransactions(angelID,fromDate,toDate,dpFlag)
+	if ageID:
+		value, cursor = sdk_gettransactions(ageID,fromDate,toDate,dpFlag)
 		cursor.close()
 		if value == '':
 			resp['status'] = 'failed'

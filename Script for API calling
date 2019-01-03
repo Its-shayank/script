@@ -30,7 +30,7 @@ for value1 in ab:
 	dt["Exchange"]= value1[2]
 	dt["SettNo"]= value1[3] 
 	dt["TransDate"]= value1[4]
-	dt["AngelCode"]= value1[5]
+	dt["A_Code"]= value1[5]
 	dt["AMCSchemeCode"]= value1[6]
 	dt["scheme_code"]= value1[7]
 	dt["ISIN"]= value1[8]

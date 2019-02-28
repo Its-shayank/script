@@ -1,0 +1,68 @@
+*************************************************************
+Motive of this program.
+1. find latest modified csv file into folder.
+2. Then copy from one folder to another.
+*************************************************************
+
+### Last block of this code can do both tasks.
+
+'''
+--------------------------------------------------
+### This block is used for csv file searching only.
+import os
+import glob
+path = '/home/ubuntu/test01/'
+extension = 'csv'
+os.chdir(path)
+result = [i for i in glob.glob('*.{}'.format(extension))]
+print(result)
+--------------------------------------------------
+'''
+
+'''
+--------------------------------------------------
+## This block is used for searching csv file and printing file name only.
+import os
+import os.path, time
+import datetime
+from glob import glob
+PATH = "/home/ubuntu/test01"
+EXT = "*.csv"
+all_csv_files = [file for path, subdir, files in os.walk(PATH) for file in glob(os.path.join(EXT))]
+print(all_csv_files)
+--------------------------------------------------
+'''
+
+'''
+--------------------------------------------------
+## It is used for printing file name with modiifed time.
+import os
+import os.path, time
+import datetime
+from glob import glob
+PATH = "/home/ubuntu/test01"
+EXT = "*.csv"
+d1 = {}
+for path, subdir, files in os.walk(PATH):
+	for file in glob(os.path.join(EXT)):
+		t = os.path.getmtime(file)
+		v1 = datetime.datetime.fromtimestamp(t)
+		d1[str(v1)] = file
+print d1
+--------------------------------------------------
+'''
+
+##=======================================================================
+## Only this block of code can search latest modified .csv file and copy from one folder to another. 
+##
+import glob
+import shutil, os
+# * means all if need specific format then *.csv
+### this is source folder ----/home/ubuntu/test01/
+list_of_files = glob.glob('/home/ubuntu/test01/*.csv') 
+# To get last modifed file from folder
+latest_file = max(list_of_files, key=os.path.getctime)
+# To copy file from one folder to another folder.
+### this is Destination folder ----/home/ubuntu/test01/new_fol/
+shutil.copy(latest_file, '/home/ubuntu/test01/new_fol/')
+##=======================================================================
